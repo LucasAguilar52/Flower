@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación de Dibujo de Flor</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: black;
+            color: white;
+            margin: 0;
+            flex-direction: column;
+        }
+        canvas {
+            background-color: black;
+            border: 1px solid white;
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+        }
+        #mensaje {
+            position: absolute;
+            color: yellow;
+            font-size: 70px;
+            display: none;
+            top: 10px;
+            text-align: center;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="mensaje">¡Feliz Primavera!</div>
+    <canvas id="florCanvas" width="500" height="500"></canvas>
+
+    <!-- Agregar Socket.IO -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    
+    <script>
+        const canvas = document.getElementById('florCanvas');
+        const ctx = canvas.getContext('2d');
+        const mensaje = document.getElementById('mensaje');
+
+        const socket = io();  // Inicializa Socket.IO
+
+        function dibujarPetalo(x, y, radiusX, radiusY, rotation, startAngle, endAngle, color) {
+            ctx.beginPath();
+            ctx.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function dibujarFlor() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
+            ctx.fillStyle = 'orange';
+            ctx.fill();
+            ctx.closePath();
+
+            let i = 0;
+            const totalPetalos = 20;
+
+            const intervalo = setInterval(() => {
+                if (i < totalPetalos) {
+                    const angle = (Math.PI / 10) * i;
+                    const x = centerX + Math.cos(angle) * 100;
+                    const y = centerY + Math.sin(angle) * 100;
+                    dibujarPetalo(x, y, 60, 30, angle, 0, 2 * Math.PI, 'yellow');
+
+                    // Enviar el estado del dibujo al servidor
+                    socket.emit('dibujar_flor', { x, y, radiusX: 60, radiusY: 30, rotation: angle });
+
+                    i++;
+                } else {
+                    clearInterval(intervalo);
+                    mensaje.style.display = 'block'; // Mostrar el mensaje al finalizar
+                }
+            }, 150);
+        }
+
+        // Escuchar los eventos de dibujo del servidor
+        socket.on('dibujar_flor', (data) => {
+            dibujarPetalo(data.x, data.y, data.radiusX, data.radiusY, data.rotation, 0, 2 * Math.PI, 'yellow');
+        });
+
+        // Iniciar el dibujo
+        dibujarFlor();
+    </script>
+</body>
+</html>
